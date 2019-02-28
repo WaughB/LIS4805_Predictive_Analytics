@@ -12,4 +12,6 @@ Course content was created by Professor Loni Hagen.
 
 ### [Week 5](week5_lab.R) Logistic Regression, [Quiz](logit.R)
 
+### [Midterm](midterm.R) Linear model and validation, [Dataset](College.csv)
+
 ### [Week 7](week7_lab.R) Decision Trees
