@@ -8,6 +8,8 @@ Course content was created by Professor Loni Hagen.
 
 ### [Week 2](week2.R) The Prediction Effect
 
-### [Week 4](week4_lab.R) Persuassion by Numbers
+### [Week 4](week4_lab1.R) Persuassion by Numbers
 
 ### [Week 5](week5_lab.R) Logistic Regression, [Quiz](logit.R)
+
+### [Week 7](week7_lab.R) Decision Trees
