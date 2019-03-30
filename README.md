@@ -15,3 +15,5 @@ Course content was created by Professor Loni Hagen.
 ### [Midterm](midterm.R) Linear model and validation, [Dataset](College.csv)
 
 ### [Week 7](week7_lab.R) Decision Trees
+
+### [Week 11](unsupervised.Rmd) Unsupervised Learning & PCA [Markdown](unsupervised.html)
