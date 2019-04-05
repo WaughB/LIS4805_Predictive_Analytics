@@ -18,4 +18,4 @@ Course content was created by Professor Loni Hagen.
 
 ### [Week 11](unsupervised.Rmd) Unsupervised Learning & PCA [Markdown](unsupervised.html)
 
-### [Week 12](kmeans.Rmd) K-Means Algorithm [Markdown](kmeans.docx)
+### [Week 12](kmeans.Rmd) K-Means Algorithm [Markdown](kmeans.docx), [Lab](k-1.means.Lab.R), [Data](grades_km_input.csv), [Plot](threePlots.jpeg)
