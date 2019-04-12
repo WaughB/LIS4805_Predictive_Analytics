@@ -1,12 +1,12 @@
 ---
-title: "final_project"
-author: "brett"
-date: "April 9, 2019"
-output: html_document
+title: "Income Prediction"
+author: "Brett"
+date: "April 11, 2019"
+output: word_document
 ---
 
 Brett Waugh
-9 April 2019
+11 April 2019
 adult_logistic.R
 Looks at data about people in the United States in 1996 and makes a prediction about income.
 Most of script is taken from https://rpubs.com/H_Zhu/235617 with very few revisions. 
@@ -20,16 +20,17 @@ require(dplyr)
 require(ISLR)
 require(boot)
 require(caret)
+require(e1071)
 ```
 
-Get the data from here: https://rpubs.com/H_Zhu/235617. Then read in the data. 
+Get the data from here: https://archive.ics.uci.edu/ml/datasets/Adult. Then read in the data. 
 
 ```{r, include=FALSE}
 # Get the data from the source.
 adult <- read.table('https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data', 
                     sep = ',', fill = F, strip.white = T)
-colnames(adult) <- c('age', 'workclass', 'fnlwgt', 'educatoin', 
-                     'educatoin_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 
+colnames(adult) <- c('age', 'workclass', 'fnlwgt', 'education', 
+                     'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 
                      'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'income')
 ```
 
@@ -39,32 +40,59 @@ str(adult)
 ```
 
 Next, we will remove some variables and create some graphs. 
+Looking at the percentages for capital gains and capital losses, it is clear that very few people partake in this. 
+Due to how few individuals partake in it, it is best to remove it from the study to not skew the results. 
+Native country will also be removed. 
 ```{r, include=TRUE}
-### Three variables dropped
-adult$educatoin <- NULL
+# Three variables dropped.
+adult$education <- NULL
 adult$fnlwgt <- NULL
 adult$relationship <- NULL
+
+# Percentage of observatiosn with no capital gain or loss.
+sum(adult$capital_gain == 0)/length(adult$capital_gain)
+sum(adult$capital_loss == 0)/length(adult$capital_loss)
+
+# Variables appear to be unimportant for analysis and are dropped. 
+adult$capital_gain <- NULL
+adult$capital_loss <- NULL
+adult$native_country <- NULL
 ```
 
 The first graph is a histogram of age by income group. 
 ```{r, include=TRUE}
 # Histogram of age by income group. 
-ggplot(adult) + aes(x=as.numeric(age), group=income, fill=income) + 
-  geom_histogram(binwidth=1, color='black')
+ggplot(adult, aes(x=age,  group=income, fill=income)) + 
+  geom_bar() + 
+  labs(x = "Age", y = "Number of Participants", title = "Income Distribution by Age", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
 ```
 As you can see in this graph, there are drastically more people making under 50k than above 50k.
 The center for those making below 50k is around 32, while the center for those making above 50k is around 34. 
 This is a small difference in age, which may mean there are other variables in play here.
 
-The next graph is a histogram of age by gender group. 
+The next set of graphs deal with sex and income. 
 ```{r, include=TRUE}
-# Histogram of age by gender group.
-ggplot(adult) + aes(x=as.numeric(age), group=sex, fill=sex) + 
-  geom_histogram(binwidth=1, color='black')
+# Subset the data for the pie charts. 
+numFe <- nrow(adult[adult$sex=="Female",])
+numMa <- nrow(adult[adult$sex=="Male",])
+numFeL <- nrow(adult[adult$sex=="Female" & adult$income=="<=50K",])
+numFeG <- nrow(adult[adult$sex=="Female" & adult$income==">50K",])
+numMaG <- nrow(adult[adult$sex=="Male" & adult$income==">50K",])
+numMaL <- nrow(adult[adult$sex=="Male" & adult$income=="<=50K",])
+
+# Pie chart of sex partcipation. 
+slices <- c(numFe, numMa)
+lbls <- c("Female", "Male")
+pie(slices, labels = lbls, main="Female vs. Male Particpation", col=c("red", "blue"))
+
+# Pie chart of sex's incomes.
+slices <- c(numFeG, numFeL, numMaG, numMaL)
+lbls <- c("Female, >50k", "Female, <=50k","Male, >50k", "Male, <=50k")
+pie(slices, labels = lbls, main="Income by Sex", col=c("red","pink","deepskyblue","blue"))
 ```
-This graph immediately shows that there are more female participants than male participants in the study.
+These graphs show that there are significantly more female participants than male participants in the study.
 This could be representative of the overall population trend, but it may also skew the results of the study. 
-There does not appear to be a significant difference with regard to age between the two sexes. 
+There does appear to be a significant difference in income when sex is considered. 
 
 ```{r, include=FALSE}
 summary(adult$workclass)
@@ -103,7 +131,7 @@ count <- as.numeric(count)
 # Create a dataframe.
 industry <- rep(levels(adult$workclass), each = 2)
 income <- rep(c('<=50K', '>50K'), 4)
-df <- data.frame(industry, income, count)
+df <- data.frame(industry, income, count) 
 df
 
 # Calculate the percentages.
@@ -122,81 +150,59 @@ ggplot(df, aes(x = industry, y = count, fill = income)) +
   geom_bar(stat = "identity") +
   geom_text(aes(y = pos, label = label), size = 2) + 
   ggtitle('Income by Industry')
+
+# Barplot of counts of industry by race. 
+ggplot(adult, aes(x=workclass, fill=race, group=race)) + 
+  geom_bar() +
+  labs(x = "Work Class", y = "Number of Participants", title = "Distribution of Race and Workclass", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
+
+# Barplot of counts of industry by sex. 
+ggplot(adult, aes(x=workclass, fill=sex, group=sex)) + 
+  geom_bar() +
+  labs(x = "Work Class", y = "Number of Participants", title = "Distribution of Sex and Occupation", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
 ```
-From this barplot, we can see that the Private industry employees the most workers, followed by the government, then self-employed, then other/unknown.
+From the "Income by Industry" barplot, we can see that the Private industry employees the most workers, followed by the government, then self-employed, then other/unknown.
 The Private industry also has the greatest number of people making above 50k per year, but Self-Employed industries have the greatest percentage of people making above 50k. 
 The industry with the most number of people making 50k or less is Other/Unknown.
 
-```{r, include=FALSE}
-# Create a dataframe.
-df1 <- data.frame(table(adult$income, adult$educatoin_num))
-names(df1) <- c('income', 'education_num', 'count')
-df1
+The "Distribution of Race and Workclass" shows that White has the most in all categories. 
+People who are Black most commonly work in Private, with second place being the Government. 
+The numbers for Ameri-Indian-Eskimo, Asian-Pac-Islander, and Other are too difficult to distiguish. 
 
-# Calculate the percentages.
-df1 <- ddply(df1, .(education_num), transform, percent = count/sum(count) * 100)
+"Distribution of Sex and Occupation" shows that most women work in Private, followed by the Government.
+This also shows that there are very few women who are Self-Employed. 
 
-# Format the labels and calculate their positions.
-df1 <- ddply(df1, .(education_num), transform, pos = (cumsum(count) - 0.5 * count))
-df1$label <- paste0(sprintf("%.0f", df1$percent), "%")
+```{r, include=TRUE, message=FALSE}
+# Dividing the 
+elementary <- nrow(adult[adult$education_num<6,])
+middle <- nrow(adult[adult$education_num<9 & adult$education_num>5,])
+high <- nrow(adult[adult$education_num<13 & adult$education_num>8,])
+undergrad <- nrow(adult[adult$education_num>12,])
 
-# Remove some in group percentage to avoid overlapped text.
-df1$label[which(df1$percent < 5)] <- NA
-```
+# Pie chart of years in school. 
+slices <- c(elementary, middle, high, undergrad)
+lbls <- c("Elementary School", "Middle School", "High School", "Undergraduate")
+pie(slices, labels = lbls, main="Highest Level of Education", col=c("green","yellow","orange","red"), sub="based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
 
-After preparing an additional dataframe and calculating some values, another barplot can be created. 
-```{r, include=TRUE}
 # Barplot of counts by years of education with in group proportions.
-ggplot(df1, aes(x = education_num, y = count, fill = income)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(y = pos, label = label), size = 2) + 
-  ggtitle('Income Level with Years of Education')
+ggplot(adult, aes(x = education_num, group=income, fill = income)) +
+     geom_histogram() +
+     labs(x = "Number of Years in Education", y = "Number of Participants", title = "Income Level with Years of Education", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
 ```
+The piechart shows that most people in 1994 were finishing their education in High School. 
+It appears that few only completed Middle and Elementary school. 
+There is also a greater number of individuals continuing their education into college. 
 Immediately, it is apparent that the greatest number of people making 50k or less have nine or ten years of education. 
 There are few individuals in the study with less than nine years of education making above 50k. 
 The number of years with the greatest percentage above 50k are sixteen years, with fifteen years coming in a close second. 
-From this study, 100% of those with only one year of education make 50k or less. 
+From this study, all of those with only one year of education make 50k or less. 
 
-```{r, include=FALSE}
-summary(adult$occupation)
-
-levels(adult$occupation)[1] <- 'Unknown'
-adult$occupation <- gsub('Adm-clerical', 'White-Collar', adult$occupation)
-adult$occupation <- gsub('Craft-repair', 'Blue-Collar', adult$occupation)
-adult$occupation <- gsub('Exec-managerial', 'White-Collar', adult$occupation)
-adult$occupation <- gsub('Farming-fishing', 'Blue-Collar', adult$occupation)
-adult$occupation <- gsub('Handlers-cleaners', 'Blue-Collar', adult$occupation)
-adult$occupation <- gsub('Machine-op-inspct', 'Blue-Collar', adult$occupation)
-adult$occupation <- gsub('Other-service', 'Service', adult$occupation)
-adult$occupation <- gsub('Priv-house-serv', 'Service', adult$occupation)
-adult$occupation <- gsub('Prof-specialty', 'Professional', adult$occupation)
-adult$occupation <- gsub('Protective-serv', 'Service', adult$occupation)
-adult$occupation <- gsub('Tech-support', 'Service', adult$occupation)
-adult$occupation <- gsub('Transport-moving', 'Blue-Collar', adult$occupation)
-adult$occupation <- gsub('Unknown', 'Other/Unknown', adult$occupation)
-adult$occupation <- gsub('Armed-Forces', 'Other/Unknown', adult$occupation)
-adult$occupation <- as.factor(adult$occupation)
-summary(adult$occupation)
-
-# Create a dataframe.
-df2 <- data.frame(table(adult$income, adult$occupation))
-names(df2) <- c('income', 'occupation', 'count')
-df2
-
-# Calculate the percentages.
-df2 <- ddply(df2, .(occupation), transform, percent = count/sum(count) * 100)
-
-# Format the labels and calculate their positions.
-df2 <- ddply(df2, .(occupation), transform, pos = (cumsum(count) - 0.5 * count))
-df2$label <- paste0(sprintf("%.0f", df2$percent), "%")
-```
-
-```{r, include=TRUE}
-# Barplot of counts by occupation with in group proportions.
-ggplot(df2, aes(x = occupation, y = count, fill = income)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(y = pos, label = label), size = 2) + 
-  ggtitle('Income Level with Different Occupations')
+```{r, include=TRUE, warning=FALSE}
+# Barplot of countrs by occupation with in group propoertions. 
+ggplot(adult, aes(x = occupation, group=income, fill = income)) +
+  geom_histogram(stat="count") +
+  labs(x = "Occupation", y = "Number of Participants", title = "Income Level with Different Occupations", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult") +
+      theme(axis.text.x = element_text(angle = -90))
 ```
 Income level can very greatly depending on which field someone goes into. 
 From this dataset, the greatest number of people making 50k or less is from the Blue-Collar occupations. 
@@ -204,88 +210,25 @@ The greatest number of people making more than 50k are in White-Collar occupatio
 While the greatest number may be in White-Collar, Professional occupations holds the greatest percentage of people making above 50k. 
 The occupations with the greatest percentage making 50k or less is in Other/Unknown and Service. 
 
-```{r, include=FALSE}
-summary(adult$marital_status)
-
-adult$marital_status <- gsub('Married-AF-spouse', 'Married', adult$marital_status)
-adult$marital_status <- gsub('Married-civ-spouse', 'Married', adult$marital_status)
-adult$marital_status <- gsub('Married-spouse-absent', 'Married', adult$marital_status)
-adult$marital_status <- gsub('Never-married', 'Single', adult$marital_status)
-adult$marital_status <- as.factor(adult$marital_status)
-summary(adult$marital_status)
-
-df3 <- data.frame(table(adult$income, adult$marital_status))
-names(df3) <- c('income', 'marital_status', 'count')
-df3
-
-# Calculate the percentages.
-df3 <- ddply(df3, .(marital_status), transform, percent = count/sum(count) * 100)
-
-# Format the labels and calculate their positions.
-df3 <- ddply(df3, .(marital_status), transform, pos = (cumsum(count) - 0.5 * count))
-df3$label <- paste0(sprintf("%.0f", df3$percent), "%")
-```
-
 ```{r, include=TRUE}
 # Barplot of counts by marital status with in group proportions.
-ggplot(df3, aes(x = marital_status, y = count, fill = income)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(y = pos, label = label), size = 2) + 
-  ggtitle('Income Level with Marital Status')
+ggplot(adult, aes(x = marital_status, group= income, fill = income)) +
+  geom_bar(stat = "count") +
+  labs(x = "Occupation", y = "Number of Participants", title = "Income Level with Different Occupations", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult") +
+  theme(axis.text.x = element_text(angle = -90))
 ```
 Marital status appears to play a significant role in determing how much someone will make.
 The greatest number of people making both types of income are Married. 
 Married also has the greatest percentage of individuals making more than 50k. 
 The greatest percentage of people making less than 50k is Single. However, Divorced, Seperated, Single, and Widowed also all have above 90% making 50k or less. 
 
-Looking at the histograms for capital gains and capital losses, it is clear that very few people partake in this. 
-Due to how few individuals partake in it, it is best to remove it from the study to not skew the results. 
-```{r, include=TRUE}
-# Histogram of capital_gain.
-ggplot(adult) + aes(x=as.numeric(capital_gain), group=income, fill=income) + 
-  geom_histogram(bins=10, color='black') + ggtitle('Histogram of Capital Gain')
-
-# Histogram of capital_loss.
-ggplot(adult) + aes(x=as.numeric(capital_loss), group=income, fill=income) + 
-  geom_histogram(bins=10, color='black') + ggtitle('Histogram of Capital Loss')
-
-# Percentage of observatiosn with no capital gain or loss.
-sum(adult$capital_gain == 0)/length(adult$capital_gain)
-
-sum(adult$capital_loss == 0)/length(adult$capital_loss)
+```{r, include=TRUE, warning=FALSE, message=FALSE}
+# Barplot of counts by race and income.
+ggplot(adult, aes(x = race, group = income, fill = income)) +
+  geom_histogram(stat = "count") +
+  labs(x = "Race", y = "Number of Participants", title = "Income Level with Different Races", caption = "based on data from: https://archive.ics.uci.edu/ml/datasets/Adult")
 ```
 
-Native country will also be removed. 
-
-```{r, include=FALSE}
-# Variables appear to be unimportant for analysis and are dropped. 
-adult$capital_gain <- NULL
-adult$capital_loss <- NULL
-adult$native_country <- NULL
-
-df4 <- data.frame(table(adult$income, adult$race))
-names(df4) <- c('income', 'race', 'count')
-df4
-
-# Calculate the percentages.
-df4 <- ddply(df4, .(race), transform, percent = count/sum(count) * 100)
-
-# Format the labels and calculate their positions.
-df4 <- ddply(df4, .(race), transform, pos = (cumsum(count) - 0.5 * count))
-df4$label <- paste0(sprintf("%.0f", df4$percent), "%")
-
-# Do not display percentage for low counts categories.
-df4$label[df4$race == 'Other'] <- NA
-df4$label[df4$race == 'Amer-Indian-Eskimo'] <- NA
-```
-
-```{r, include=TRUE}
-# Bar plot of counts by marital status with in group proportions.
-ggplot(df4, aes(x = race, y = count, fill = income)) +
-  geom_bar(stat = "identity") +
-  geom_text(aes(y = pos, label = label), size = 2) + 
-  ggtitle('Income Level by Race')
-```
 Looking at income distribution by race can be a tricky situation as some people can be from multple races, or are sometimes unaware of ancestry. 
 The greatest number of people making above 50k are White, but the greatest number of people making 50k or less are also White. 
 Amer-Indian-Eskimo, Asian-Pac-Islander, Other, and Black all have high percentages of people making 50k or less. 
@@ -305,7 +248,7 @@ testing_set <- adult[-(1:sz),]
 # Income will be the response variable, the other eight variables will be fit.
 m1 <- glm(income ~ ., data = training_set, family = binomial('logit'))
 ```
-```{r, include=TRUE}
+```{r, include=TRUE, message=FALSE, warning=FALSE}
 summary(m1)
 confint(m1)
 ```
@@ -331,19 +274,22 @@ prob <- predict(m1, testing_set, type = 'response')
 pred <- rep('<=50K', length(prob))
 pred[prob>=.5] <- '>50K'
 ```
+
 ```{r, include=TRUE}
 # confusion matrix 
 tb <- table(pred, testing_set$income)
 tb
-(4533+855)/(4533+745+379+855)
+resultGiven <- (4526+893)/(4526+707+386+893)
+resultGiven
 ```
 
-From the confusion matrix we can determine the accuracy of the model to be 0.827 or 82.7%.
+From the confusion matrix we can determine the accuracy of the model to be 0.832 or 83.2%.
 This is a great score for the model, because it does not suggest overfitting while maintaining a high degree of accuracy. 
 Given information about an individual, the model should be able to accurately predict if the individual makes greater than 50k 82.7% of the time.
 
-The second model uses a slightly different approach to the problem. 
-```{r, include=FALSE}
+The second model uses a slightly different approach to the problem. This model is a "General Linear Model".
+The logistic model is more appropirate for this dataset, so it will be interesting to see how well a linear model performs on the dataset. 
+```{r, include=TRUE}
 # ---- Second model ---- #
 ControlParameters <-trainControl(method="repeatedcv", 
                                  number=10,
@@ -355,9 +301,89 @@ otherModel <-train(income ~ .,
                 trControl= ControlParameters
 )
 
-```
-```{r, include=TRUE}
 otherModel
+resultOtherModel <- 0.830
+resultOtherModel
 ```
-While this model took a different approach to the problem, it still yielded an accuracy of 0.824 or 82.4%. 
+While this model took a different approach to the problem, it still yielded an accuracy of 0.830 or 83.0%. 
 Another benefit to this model is that it uses 10-fold cross validation, making it understandable to lose an additional percentage from the first model.
+
+Below are Support Vector Machine (SVM) models. I played around with the C value to see if there was a significant impact on the resutls. 
+```{r, include=TRUE}
+# First SVM with C=1
+svmfit1 = svm(income ~ ., data = adult, kernal="radial", cost=1, na.action =na.omit, scale = TRUE)
+print(svmfit1)
+
+# Results of training set. 
+pred_train1 <- predict(svmfit1, training_set)
+result1 <- mean(pred_train1==training_set$income)
+result1
+
+# Results of test set.
+pred_test1 <- predict(svmfit1, testing_set)
+mean(pred_test1==testing_set$income)
+```
+The results from the training set are 0.835 or 83.5% accurate, while the results from the test set are 0.833 or 83.3% accurate.
+Because the values are similar we have good confidence that the model was trained correctly. 
+
+```{r, include=TRUE}
+# Second SVM with C=10
+svmfit10 = svm(income ~ ., data = adult, kernal="radial", cost=10, na.action =na.omit, scale = TRUE)
+print(svmfit10)
+
+# Results of training set. 
+pred_train10 <- predict(svmfit10, training_set)
+result10 <- mean(pred_train10==training_set$income)
+result10
+
+# Results of test set.
+pred_test10 <- predict(svmfit10, testing_set)
+mean(pred_test10==testing_set$income)
+```
+The results from the training set are 0.835 or 83.5% accurate, while the results from the test set are 0.836 or 83.6% accurate.
+Because the values are similar we have good confidence that the model was trained correctly. 
+
+
+```{r, include=TRUE}
+# Third SVM with C=25
+svmfit25 = svm(income ~ ., data = adult, kernal="radial", cost=25, na.action =na.omit, scale = TRUE)
+print(svmfit25)
+
+# Results of training set. 
+pred_train25 <- predict(svmfit25, training_set)
+result25 <- mean(pred_train25==training_set$income)
+result25
+
+# Results of test set.
+pred_test25 <- predict(svmfit25, testing_set)
+mean(pred_test25==testing_set$income)
+```
+The results from the training set are 0.836 or 83.6% accurate, while the results from the test set are 0.837 or 83.7% accurate.
+Because the values are similar we have good confidence that the model was trained correctly. 
+
+
+With the results from above, I used the C value of 25 to make the last SVM. To further support the results, I used cross validation of ten.
+```{r, include=TRUE}
+# Final SVM with C=
+svmfitFinal = svm(income ~ ., data = adult, kernal="radial", cost=25, na.action =na.omit, scale = TRUE, cross=10)
+print(svmfitFinal)
+
+# Results of training set. 
+pred_trainFinal <- predict(svmfitFinal, training_set)
+resultFinal <- mean(pred_trainFinal==training_set$income)
+resultFinal
+
+# Results of test set.
+pred_testFinal <- predict(svmfitFinal, testing_set)
+resultFinal <- mean(pred_testFinal==testing_set$income)
+```
+Final results come to 0.836 or 83.6% for the testing set, and 0.837 or 83.7% for the test set. 
+This leads us to conclude that the models have been trained correctly. 
+```{r, include=TRUE}
+# Dataframe for model results.
+modelResults = data.frame(model=c("Given model", "Other model", "First SVM", "Second SVM", "Third SVM", "Final SVM"))
+modelResults$accuracy <- c(resultGiven, resultOtherModel, result1, result10, result25, resultFinal) 
+
+# Plot for results from models. 
+plot(modelResults$model, modelResults$accuracy, type="p", main="Results of Models", sub="based on data from: https://archive.ics.uci.edu/ml/datasets/Adult", xlab="Model", ylab="Accuracy")
+```

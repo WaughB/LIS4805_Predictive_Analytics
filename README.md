@@ -20,4 +20,4 @@ Course content was created by Professor Loni Hagen.
 
 ### [Week 12](kmeans.Rmd) K-Means Algorithm [Markdown](kmeans.docx), [Lab](k-1.means.Lab.R), [Data](grades_km_input.csv), [Plot](threePlots.jpeg)
 
-### [Final Project](final_project.Rmd) Income Prediction [Markdown](final_project.html)
+### [Final Project](final_project.Rmd) Income Prediction [Markdown](final_project.docx)
