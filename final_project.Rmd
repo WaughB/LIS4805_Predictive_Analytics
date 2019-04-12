@@ -9,7 +9,7 @@ Brett Waugh
 11 April 2019
 adult_logistic.R
 Looks at data about people in the United States in 1996 and makes a prediction about income.
-Most of script is taken from https://rpubs.com/H_Zhu/235617 with very few revisions. 
+Script is based off of https://rpubs.com/H_Zhu/235617 with some revision. 
 
 ```{r, include=FALSE}
 # Load necessary libraries. 
@@ -90,7 +90,7 @@ slices <- c(numFeG, numFeL, numMaG, numMaL)
 lbls <- c("Female, >50k", "Female, <=50k","Male, >50k", "Male, <=50k")
 pie(slices, labels = lbls, main="Income by Sex", col=c("red","pink","deepskyblue","blue"))
 ```
-These graphs show that there are significantly more female participants than male participants in the study.
+These graphs show that there are significantly more male participants than female participants in the study.
 This could be representative of the overall population trend, but it may also skew the results of the study. 
 There does appear to be a significant difference in income when sex is considered. 
 
